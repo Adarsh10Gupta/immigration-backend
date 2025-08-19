@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Add New Blog</title>
+</head>
+<body>
+  <h1>Create a New Blog</h1>
+  <form action="/admin/create-blog" method="POST">
+    <label>Title:</label><br>
+    <input type="text" name="title" required><br><br>
+    <input type="text" name="image" placeholder="Image URL" required />
+<input type="date" name="date" required />
+
+    <label>Content:</label><br>
+    <textarea name="content" rows="10" cols="30" required></textarea><br><br>
+
+    <button type="submit">Submit</button>
+  </form>
+</body>
+</html>

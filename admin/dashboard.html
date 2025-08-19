@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Dashboard</title>
+  <style>
+    :root {
+      --primary: #7D0A0A; /* Bold red */
+      --secondary: #1B1F2B; /* Dark background */
+      --light: #ffffff;
+      --muted: #f4f4f4;
+      --shadow: rgba(0,0,0,0.1);
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--muted);
+      padding: 20px;
+      margin: 0;
+      color: var(--secondary);
+    }
+
+    h1 {
+      color: var(--primary);
+      font-size: 2rem;
+    }
+    h2 {
+      margin-top: 40px;
+      color: var(--secondary);
+      text-align: center;
+    }
+
+    /* Form Styling */
+    form {
+      background: var(--light);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px var(--shadow);
+      margin-bottom: 20px;
+      max-width: 600px;
+      justify-self: center;
+    }
+
+    input, textarea, select {
+      width: 90%;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+
+    button {
+      padding: 10px 18px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: 0.3s ease;
+    }
+    button:hover {
+      background: #a31313;
+    }
+
+    /* Blog Cards */
+    #blogsList {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .blog-card {
+      background: var(--light);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 14px var(--shadow);
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.2s ease;
+    }
+    .blog-card:hover {
+      transform: translateY(-3px);
+    }
+
+    .blog-image {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+    }
+
+    .blog-content-wrapper {
+      padding: 15px;
+      flex: 1;
+    }
+
+    .blog-card h3 {
+      margin: 0 0 10px;
+      color: var(--primary);
+    }
+    .blog-card p {
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+
+    .toggle-content {
+      margin-top: 10px;
+      background: transparent;
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      font-size: 0.85rem;
+      padding: 5px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .toggle-content:hover {
+      background: var(--primary);
+      color: white;
+    }
+
+    /* Edit/Delete Forms Inside Cards */
+    .blog-card form {
+      background: transparent;
+      box-shadow: none;
+      padding: 10px 15px;
+      border-top: 1px solid #eee;
+      margin: 0;
+    }
+    .blog-card form button {
+      background: var(--primary);
+      font-size: 0.85rem;
+      padding: 6px 10px;
+    }
+    .blog-card form button[style*="red"] {
+      background: #d11a2a !important;
+    }
+  </style>
+</head>
+<body>
+  <h1>Welcome Admin!</h1>
+  <p>You can now create, edit, or delete blogs.</p>
+
+  <h2>Create Blog</h2>
+  <form id="addBlogForm" enctype="multipart/form-data">
+    <input type="file" name="image" placeholder="Image URL" accept="image/*" required />
+    <input type="text" name="title" placeholder="Blog Title" required>
+    <textarea name="content" placeholder="Blog Content" required></textarea>
+    <input type="date" name="date" required />
+    <button type="submit">Add Blog</button>
+  </form>
+
+  <h2>All Blogs</h2>
+  <div id="blogsList"></div>
+
+  <br>
+  <a href="/logout" style="background-color: #a31313; padding: 10px; color: white; text-decoration: none; border-radius: 5px;">Logout</a>
+
+  <script>
+    function escapeHTML(str) {
+      if (!str) return '';
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function createBlogHTML(blog) {
+      const truncated = blog.content.length > 300;
+      const shortText = escapeHTML(blog.content.slice(0, 300));
+      const fullText = escapeHTML(blog.content);
+
+      return `
+        <div class="blog-card">
+          <img class="blog-image" src="${blog.imageUrl}" alt="Blog Image" />
+          <div class="blog-content-wrapper">
+            <h3>${escapeHTML(blog.title)}</h3>
+            <p><strong>Date:</strong> ${new Date(blog.date).toLocaleDateString()}</p>
+            <p class="blog-content">
+              <span class="short">${shortText}${truncated ? '...' : ''}</span>
+              ${truncated ? `<span class="full" style="display:none;">${fullText}</span>
+              <button class="toggle-content">Read More</button>` : ''}
+            </p>
+          </div>
+
+          <form action="/edit-blog/${blog._id}" method="POST">
+            <input type="text" name="title" value="${escapeHTML(blog.title)}" required>
+            <textarea name="content" required>${escapeHTML(blog.content)}</textarea>
+            <input type="file" name="image" value="${blog.imageUrl}" required>
+            <input type="date" name="date" value="${blog.date.split('T')[0]}" required>
+            <button type="submit">Update</button>
+          </form>
+
+          <form action="/delete-blog/${blog._id}" method="POST">
+            <button type="submit" style="background: red;">Delete</button>
+          </form>
+        </div>
+      `;
+    }
+
+    fetch('/api/blogs')
+      .then(res => res.json())
+      .then(data => {
+        const blogListDiv = document.getElementById('blogsList');
+        data.forEach(blog => {
+          blogListDiv.innerHTML += createBlogHTML(blog);
+        });
+
+        document.querySelectorAll('.toggle-content').forEach(btn => {
+          btn.addEventListener('click', function () {
+            const parent = this.parentElement;
+            const short = parent.querySelector('.short');
+            const full = parent.querySelector('.full');
+            const isExpanded = full.style.display === 'inline';
+
+            short.style.display = isExpanded ? 'inline' : 'none';
+            full.style.display = isExpanded ? 'none' : 'inline';
+            this.textContent = isExpanded ? 'Read More' : 'Read Less';
+          });
+        });
+      });
+
+    document.getElementById('addBlogForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      fetch('/add-blog', {
+        method: 'POST',
+        body: formData
+      }).then(res => {
+        if (res.ok) location.reload();
+      });
+    });
+  </script>
+</body>
+</html>

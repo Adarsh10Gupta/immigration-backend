@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Blogs</title>
+</head>
+<style>
+  h1{
+    text-align: center;
+    color: black;
+  }
+  form{
+    justify-self: center;
+    display: flex;
+    gap: 20px;
+  }
+  form input,textarea{
+    flex-direction: column;
+    border-radius: 5px;
+    background-color: wheat;
+    font-family: sans-serif;
+    margin: 20px;
+    width: 200px;
+    height: 30px;
+  }
+  
+  button{
+    color: red;
+    background-color: black;
+    transition: 0.3s ease;
+    border-radius: 10px;
+    margin-left: 20px;
+    width: 200px;
+    height: 30px;
+  }
+  button:hover{
+    transform: scale(1.05);
+  }
+</style>
+<body>
+    <h1>Add blogs</h1>
+    <form action="/add-blog" method="POST">
+      <div class="entries">
+        <input type="text" name="title" placeholder="Title" required><br>
+        <input type="text" name="image" placeholder="Image URL" required><br>
+        <input type="date" name="date" required><br>
+        <textarea name="content" placeholder="Content" required></textarea><br>
+        <button type="submit">Add Blog</button>
+      </div>
+</form>
+
+
+</body>
+</html>

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Edit Blog</title>
+</head>
+<body>
+  <h1>Edit Blog</h1>
+  <form action="/admin/edit-blog" method="POST">
+    <label>Blog ID:</label><br>
+    <input type="text" name="id" required><br><br>
+
+    <label>New Title:</label><br>
+    <input type="text" name="title"><br><br>
+
+    <label>New Content:</label><br>
+    <textarea name="content" rows="10" cols="30"></textarea><br><br>
+
+    <button type="submit">Update</button>
+  </form>
+</body>
+</html>

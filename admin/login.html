@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Login</title>
+  <style>
+    *{
+      margin: 0;
+      padding: 0;
+    }
+    .login-box{
+      justify-content: center;
+      background-color: rgba(0, 38, 255, 0.701);
+      padding: 20px;
+      display: flex;
+      gap: 20px;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    form{
+      flex-direction: column;
+      display: flex;
+      gap: 20px;
+      width: 20%;
+      align-items: center;
+    }
+    h2{
+      font-size: 3.5rem;
+      font-family: sans-serif;
+    }
+    input{
+      border-radius: 10px;
+      width: 100%;
+      padding: 10px;
+    }
+    button{
+      border-radius: 10px;
+      width: 50%;
+    }
+    @media (max-width:768px){
+      input{
+        width: 350%;
+      }
+      button{
+        width: 250%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <h2>Admin Login</h2>
+    <form action="/login" method="POST">
+      <input type="text" name="username" placeholder="Username"/>
+      <input type="password" name="password"  placeholder="Password"/>
+      <button type="submit">Login</button>
+    </form>
+  </div>
+
+</body>
+</html>
