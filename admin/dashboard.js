@@ -17,16 +17,17 @@ function createBlogHTML(blog) {
 
   return `
     <div class="blog-card" data-id="${blog._id}">
-      <img class="blog-image" src="${blog.imageUrl}" alt="Blog Image" />
+      <img class="blog-image" src="${blog.imageUrl || ''}" alt="Blog Image" />
       <div class="blog-content-wrapper">
-        <h3>${escapeHTML(blog.title)}</h3>
-        <p><strong>Date:</strong> ${new Date(blog.createdAt).toLocaleDateString()}</p>
+        <h3>${escapeHTML(blog.title || "Untitled")}</h3>
+        <p><strong>Date:</strong> ${blog.createdAt ? new Date(blog.createdAt).toLocaleDateString() : "N/A"}</p>
         <p class="blog-content">
           <span class="short">${shortText}${truncated ? '...' : ''}</span>
           ${truncated ? `<span class="full" style="display:none;">${fullText}</span>
           <button class="toggle-content">Read More</button>` : ''}
         </p>
       </div>
+    </div>
 
       <form class="editBlogForm" enctype="multipart/form-data">
         <input type="text" name="title" value="${escapeHTML(blog.title)}" required>
