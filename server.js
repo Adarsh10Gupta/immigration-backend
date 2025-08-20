@@ -29,109 +29,13 @@ mongoose.connect(process.env.MONGODB_URI, {
   .then(() => console.log('✅ Connected to MongoDB Atlas'))
   .catch((err) => console.error('❌ MongoDB connection error:', err));
 
-// ✅ Blog Schema and Model
-const blogSchema = new mongoose.Schema({
-  title: String,
-  content: String,
-  imageUrl: String,
-  date: { type: Date, default: Date.now }
-});
-const Blog = mongoose.model('Blog', blogSchema);
+const authRoutes = require("./routes/authRoutes");
+const blogRoutes = require("./routes/blogRoutes");
 
-// ✅ Auth Middleware
-function requireLogin(req, res, next) {
-  if (req.session && req.session.user === 'admin') return next();
-  return res.redirect('/login');
-}
+app.use("/", authRoutes);
+app.use("/", blogRoutes);
 
-// ✅ Routes
-app.get('/', (req, res) => {
-  res.send('<h1>Welcome</h1><a href="/login">Login</a>');
-});
 
-app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'admin', 'login.html'));
-});
-
-app.post('/login', (req, res) => {
-  const { username, password } = req.body;
-  if (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD) {
-    req.session.user = username;
-    return res.redirect('/dashboard');
-  }
-  res.redirect('/login');
-});
-
-app.get('/logout', (req, res) => {
-  req.session.destroy();
-  res.redirect('/login');
-});
-
-app.get('/dashboard', requireLogin, (req, res) => {
-  res.sendFile(path.join(__dirname, 'admin', 'dashboard.html'));
-});
-
-app.get('/add-blog', requireLogin, (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'add-blog.html'));
-});
-
-app.post('/add-blog', requireLogin, async (req, res) => {
-  const { title, content, image, date } = req.body;
-  const blog = new Blog({
-    title,
-    content,
-    imageUrl: image,
-    date: date || new Date()
-  });
-  await blog.save();
-  res.redirect('/dashboard');
-});
-
-app.get('/edit-blog/:id', requireLogin, async (req, res) => {
-  const blog = await Blog.findById(req.params.id);
-  if (!blog) return res.send('Blog not found');
-
-  const html = `
-    <form action="/edit-blog/${blog._id}" method="POST">
-      <input type="text" name="title" value="${blog.title}" required><br>
-      <input type="text" name="image" value="${blog.imageUrl}" required><br>
-      <input type="date" name="date" value="${blog.date.toISOString().split('T')[0]}" required><br>
-      <textarea name="content" required>${blog.content}</textarea><br>
-      <button type="submit">Update Blog</button>
-    </form>`;
-  res.send(html);
-});
-
-app.post('/edit-blog/:id', requireLogin, async (req, res) => {
-  const { title, content, image, date } = req.body;
-  await Blog.findByIdAndUpdate(req.params.id, {
-    title,
-    content,
-    imageUrl: image,
-    date: date || new Date()
-  });
-  res.redirect('/dashboard');
-});
-
-app.post('/delete-blog/:id', async (req, res) => {
-  const blogId = req.params.id;
-  try {
-    await Blog.findByIdAndDelete(blogId);
-    res.redirect('/dashboard');
-  } catch (err) {
-    console.error('Error deleting blog:', err);
-    res.status(500).send('Failed to delete blog');
-  }
-});
-
-app.get('/api/blogs', async (req, res) => {
-  try {
-    const blogs = await Blog.find().sort({ date: -1 });
-    res.json(blogs);
-  } catch (error) {
-    res.status(500).json({ message: 'Could not load blogs' });
-  }
-});
 
 //send-contactUsForm
 //german page form
