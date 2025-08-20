@@ -10,6 +10,24 @@ const multer = require('multer');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const multer = require("multer");
+const path = require("path");
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, "uploads"));
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + "-" + file.originalname);
+  },
+});
+
+const upload = multer({ storage });
+
+// Serve uploads folder statically
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+
 //cors setup
 const cors = require('cors');
 app.use(cors({
@@ -17,16 +35,6 @@ app.use(cors({
   methods: ["GET", "POST"]
 }));
 
-// Set storage engine
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, 'uploads')); // store in /uploads folder
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname)); // e.g. 1692212-123.png
-  }
-});
 // Serve the uploads folder as static
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -43,7 +51,7 @@ app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your_secret_key',
   resave: false,
-  saveUninitialized: true
+  saveUninitialized: false,
 }));
 
 // ✅ Connect to MongoDB Atlas
@@ -131,21 +139,6 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir);
 }
 
-// Configure multer with file filter + size limit
-const upload = multer({ 
-  storage: storage,
-  fileFilter: (req, file, cb) => {
-    const fileTypes = /jpeg|jpg|png|gif/;
-    const extName = fileTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimeType = fileTypes.test(file.mimetype);
-    if (extName && mimeType) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only image files are allowed (jpg, jpeg, png, gif)"));
-    }
-  },
-  limits: { fileSize: 10 * 1024 * 1024 } // 10 MB max
-});
 
 // Secure blog POST route
 app.post('/api/blogs', (req, res) => {
@@ -174,7 +167,7 @@ app.get('/edit-blog/:id', requireLogin, async (req, res) => {
   const html = `
     <form action="/edit-blog/${blog._id}" method="POST">
       <input type="text" name="title" value="${blog.title}" required><br>
-      <input type="text" name="image" value="${blog.imageUrl}" required><br>
+      <input type="hidden" name="image" value="${blog.imageUrl}" required><br>
       <input type="date" name="date" value="${blog.date.toISOString().split('T')[0]}" required><br>
       <textarea name="content" required>${blog.content}</textarea><br>
       <button type="submit">Update Blog</button>
@@ -185,20 +178,24 @@ app.get('/edit-blog/:id', requireLogin, async (req, res) => {
 // =================== EDIT BLOG ===================
 app.post('/edit-blog/:id', requireLogin, upload.single('image'), async (req, res) => {
   try {
-    const { title, content, date } = req.body;
-    const updateFields = { title, content, date };
+    const updateData = {
+      title: req.body.title,
+      content: req.body.content,
+      date: req.body.date || new Date()
+    };
 
     if (req.file) {
-      updateFields.imageUrl = `/uploads/${req.file.filename}`;
+      updateData.imageUrl = `/uploads/${req.file.filename}`;
     }
 
-    await Blog.findByIdAndUpdate(req.params.id, updateFields, { new: true });
-    res.json({ success: true, message: "Blog updated successfully!" });
-  } catch (error) {
-    console.error("Error editing blog:", error);
-    res.status(500).json({ success: false, message: "Failed to update blog" });
+    await Blog.findByIdAndUpdate(req.params.id, updateData);
+    res.status(200).send("Blog updated");
+  } catch (err) {
+    console.error("Error updating blog:", err);
+    res.status(500).send("Server error");
   }
 });
+
 
 app.post('/delete-blog/:id', async (req, res) => {
   const blogId = req.params.id;
