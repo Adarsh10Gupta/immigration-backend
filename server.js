@@ -44,6 +44,9 @@ const blogRoutes = require("./routes/blogRoutes");
 
 app.use("/", authRoutes);
 app.use("/", blogRoutes);
+app.get("/", (req, res) => {
+  res.redirect("/login");
+});
 
 
 
