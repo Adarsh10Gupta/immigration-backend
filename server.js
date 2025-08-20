@@ -24,7 +24,7 @@ app.set('trust proxy', 1);
 */
 const allowedOrigins = [
   'https://immigration-frontend-ten.vercel.app',
-  'https://immigration-frontend-dr23pg6wm-adarsh-guptas-projects-8d1322f2.vercel.app'
+  'https://immigration-frontend-dr23pg6wm-adarsh-guptas-projects-8d1322f2.vercel.app/'
 ];
 
 app.use(cors({
