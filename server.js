@@ -110,24 +110,30 @@ app.get('/dashboard', requireLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'admin', 'dashboard.html'));
 });
 
-// =================== ADD BLOG ===================
-app.post('/add-blog', requireLogin, upload.single('image'), async (req, res) => {
+
+// Fetch all blogs (used by frontend & dashboard)
+app.get("/api/blogs", async (req, res) => {
   try {
-    const { title, content, date } = req.body;
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
-
-    const blog = new Blog({
-      title,
-      content,
-      imageUrl,
-      date: date || new Date()
+    const blogs = await Blog.find().sort({ date: -1 });
+    res.json(blogs);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch blogs" });
+  }
+});
+// =================== ADD BLOG ===================
+app.post("/add-blog", requireLogin, upload.single("image"), async (req, res) => {
+  try {
+    const newBlog = new Blog({
+      title: req.body.title,
+      content: req.body.content,
+      date: req.body.date,
+      imageUrl: req.file ? "/uploads/" + req.file.filename : "",
     });
-
-    await blog.save();
-    res.status(201).json({ success: true, message: "Blog added successfully!" });
-  } catch (error) {
-    console.error("Error adding blog:", error);
-    res.status(500).json({ success: false, message: "Failed to add blog" });
+    await newBlog.save();
+    res.status(200).json({ message: "Blog added successfully!" });
+  } catch (err) {
+    console.error("Error adding blog:", err);
+    res.status(500).json({ error: "Failed to add blog" });
   }
 });
 // Ensure uploads folder exists
@@ -174,44 +180,46 @@ app.get('/edit-blog/:id', requireLogin, async (req, res) => {
 });
 
 // =================== EDIT BLOG ===================
-app.post('/edit-blog/:id', requireLogin, upload.single('image'), async (req, res) => {
+app.post("/edit-blog/:id", requireLogin, upload.single("image"), async (req, res) => {
   try {
-    const updateData = {
-      title: req.body.title,
-      content: req.body.content,
-      date: req.body.date || new Date()
-    };
+    const blog = await Blog.findById(req.params.id);
+    if (!blog) return res.status(404).json({ error: "Blog not found" });
 
     if (req.file) {
-      updateData.imageUrl = `/uploads/${req.file.filename}`;
+      if (blog.imageUrl) {
+        fs.unlink(path.join(__dirname, blog.imageUrl), (err) => {
+          if (err) console.error("Failed to delete old image:", err);
+        });
+      }
+      blog.imageUrl = "/uploads/" + req.file.filename;
     }
 
-    await Blog.findByIdAndUpdate(req.params.id, updateData);
-    res.status(200).send("Blog updated");
+    blog.title = req.body.title;
+    blog.content = req.body.content;
+    blog.date = req.body.date;
+    await blog.save();
+
+    res.redirect("/dashboard");
   } catch (err) {
-    console.error("Error updating blog:", err);
-    res.status(500).send("Server error");
+    console.error("Error editing blog:", err);
+    res.status(500).json({ error: "Failed to edit blog" });
   }
 });
 
 
-app.post('/delete-blog/:id', async (req, res) => {
-  const blogId = req.params.id;
-  try {
-    await Blog.findByIdAndDelete(blogId);
-    res.redirect('/dashboard');
-  } catch (err) {
-    console.error('Error deleting blog:', err);
-    res.status(500).send('Failed to delete blog');
-  }
-});
 
-app.get('/api/blogs', async (req, res) => {
+app.post("/delete-blog/:id", requireLogin, async (req, res) => {
   try {
-    const blogs = await Blog.find().sort({ date: -1 });
-    res.json(blogs);
-  } catch (error) {
-    res.status(500).json({ message: 'Could not load blogs' });
+    const blog = await Blog.findById(req.params.id);
+    if (blog && blog.imageUrl) {
+      fs.unlink(path.join(__dirname, blog.imageUrl), (err) => {
+        if (err) console.error("Failed to delete image:", err);
+      });
+    }
+    await Blog.findByIdAndDelete(req.params.id);
+    res.redirect("/dashboard");
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete blog" });
   }
 });
 
