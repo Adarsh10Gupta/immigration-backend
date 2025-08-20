@@ -12,21 +12,8 @@ const PORT = process.env.PORT || 3000;
 const cors = require("cors");
 
 // Allow only your frontend
-const allowedOrigins = [
-  "https://immigration-frontend-qur5saqzr-adarsh-guptas-projects-8d1322f2.vercel.app",
-  "https://immigration-frontend-ten.vercel.app"
-];
 app.use(cors({
-  origin: function (origin, callback) {
-    // allow requests with no origin (like mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = "CORS policy does not allow access from this origin.";
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
-  },
-  credentials: true
+  origin: "*"
 }));
 
 
