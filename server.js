@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3000;
 //cors setup
 const cors = require('cors');
 app.use(cors({
-  origin: "*", // later you can restrict to your frontend URL
+  origin: "https://immigration-frontend-ten.vercel.app", // later you can restrict to your frontend URL
   methods: ["GET", "POST"]
 }));
 
