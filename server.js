@@ -104,22 +104,26 @@ app.get('/dashboard', requireLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'admin', 'dashboard.html'));
 });
 
-app.get('/add-blog', requireLogin, (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'add-blog.html'));
-});
+// =================== ADD BLOG ===================
+app.post('/add-blog', requireLogin, upload.single('image'), async (req, res) => {
+  try {
+    const { title, content, date } = req.body;
+    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
-app.post('/add-blog', requireLogin, async (req, res) => {
-  const { title, content, image, date } = req.body;
-  const blog = new Blog({
-    title,
-    content,
-    imageUrl: image,
-    date: date || new Date()
-  });
-  await blog.save();
-  res.redirect('/dashboard');
-});
+    const blog = new Blog({
+      title,
+      content,
+      imageUrl,
+      date: date || new Date()
+    });
 
+    await blog.save();
+    res.status(201).json({ success: true, message: "Blog added successfully!" });
+  } catch (error) {
+    console.error("Error adding blog:", error);
+    res.status(500).json({ success: false, message: "Failed to add blog" });
+  }
+});
 // Ensure uploads folder exists
 const fs = require('fs');
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -178,15 +182,22 @@ app.get('/edit-blog/:id', requireLogin, async (req, res) => {
   res.send(html);
 });
 
-app.post('/edit-blog/:id', requireLogin, async (req, res) => {
-  const { title, content, image, date } = req.body;
-  await Blog.findByIdAndUpdate(req.params.id, {
-    title,
-    content,
-    imageUrl: image,
-    date: date || new Date()
-  });
-  res.redirect('/dashboard');
+// =================== EDIT BLOG ===================
+app.post('/edit-blog/:id', requireLogin, upload.single('image'), async (req, res) => {
+  try {
+    const { title, content, date } = req.body;
+    const updateFields = { title, content, date };
+
+    if (req.file) {
+      updateFields.imageUrl = `/uploads/${req.file.filename}`;
+    }
+
+    await Blog.findByIdAndUpdate(req.params.id, updateFields, { new: true });
+    res.json({ success: true, message: "Blog updated successfully!" });
+  } catch (error) {
+    console.error("Error editing blog:", error);
+    res.status(500).json({ success: false, message: "Failed to update blog" });
+  }
 });
 
 app.post('/delete-blog/:id', async (req, res) => {
