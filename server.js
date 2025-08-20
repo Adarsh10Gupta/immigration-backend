@@ -26,9 +26,14 @@ app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your_secret_key',
   resave: false,
-  saveUninitialized: true,
-  cookie: { sameSite: "none", secure: true }
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: "none",
+    secure: true
+  }
 }));
+
 
 // ✅ Connect to MongoDB Atlas
 mongoose.connect(process.env.MONGODB_URI, {
