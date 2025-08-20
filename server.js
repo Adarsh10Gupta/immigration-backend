@@ -186,7 +186,7 @@ app.get('/dashboard', requireLogin, (req, res) => {
 // GET all blogs (public)
 app.get('/blogs', async (req, res) => {
   try {
-    const blogs = await Blog.find().sort({ date: -1 }).lean();
+    const blogs = await Blog.find().sort({ createdAt: -1 });
     const mapped = blogs.map(b => ({ ...b, imageUrl: safeImageUrl(b.imageUrl) }));
     return res.json(mapped);
   } catch (err) {
