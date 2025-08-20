@@ -19,6 +19,7 @@ const PORT = process.env.PORT || 3000;
 
 /* ---------------- Trust proxy (Render/Heroku style) ---------------- */
 app.set('trust proxy', 1);
+app.use(express.static(path.join(__dirname, 'admin')));
 
 /* ---------------- CORS ----------------
    Adjust allowedOrigins to include every frontend origin that needs access.
