@@ -28,17 +28,9 @@ const allowedOrigins = [
 ];
 
 app.use(cors({
-  origin: function(origin, callback){
-    if (!origin) return callback(null, true); // allow server-to-server or curl
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
-  },
-  credentials: true
+  origin: true,        // allows all origins dynamically
+  credentials: true    // needed if you use cookies/session
 }));
-
 /* ---------------- Helmet (CSP) ----------------
    Allows fonts, blob scripts and remote images. Adjust as needed.
 */
