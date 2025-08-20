@@ -200,7 +200,7 @@
       `;
     }
 
-    fetch('/api/blogs')
+    fetch('/api/blogs', {credentials: "include"})
       .then(res => res.json())
       .then(data => {
         const blogListDiv = document.getElementById('blogsList');
@@ -227,6 +227,7 @@
       const formData = new FormData(this);
       fetch('/add-blog', {
         method: 'POST',
+        credentials: "include",
         body: new URLSearchParams(formData)
       }).then(res => {
         if (res.ok) location.reload();

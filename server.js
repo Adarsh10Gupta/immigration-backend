@@ -9,6 +9,14 @@ require('dotenv').config(); // Load environment variables
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const cors = require("cors");
+
+app.use(cors({
+  origin: "https://immigration-frontend-dr23pg6wm-adarsh-guptas-projects-8d1322f2.vercel.app",
+  credentials: true
+}));
+
+
 // ✅ Middleware
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json());
@@ -18,7 +26,8 @@ app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your_secret_key',
   resave: false,
-  saveUninitialized: true
+  saveUninitialized: true,
+  cookie: { sameSite: "none", secure: true }
 }));
 
 // ✅ Connect to MongoDB Atlas
