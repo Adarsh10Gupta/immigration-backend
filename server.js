@@ -10,7 +10,6 @@ const multer = require('multer');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const multer = require("multer");
 const path = require("path");
 
 const storage = multer.diskStorage({
