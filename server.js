@@ -26,11 +26,23 @@ const upload = multer({ storage });
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 
-//cors setup
 const cors = require('cors');
+
+const allowedOrigins = [
+  'https://immigration-frontend-ten.vercel.app',
+  'https://immigration-frontend-dr23pg6wm-adarsh-guptas-projects-8d1322f2.vercel.app'
+];
+
 app.use(cors({
-  origin: "https://immigration-frontend-ten.vercel.app", // later you can restrict to your frontend URL
-  methods: ["GET", "POST"]
+  origin: function(origin, callback){
+    if(!origin) return callback(null, true); // allow non-browser requests like Postman
+    if(allowedOrigins.indexOf(origin) === -1){
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true
 }));
 
 
