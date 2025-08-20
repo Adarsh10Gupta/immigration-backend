@@ -33,17 +33,13 @@ app.use(cors({
   methods: ["GET", "POST"]
 }));
 
-// Serve the uploads folder as static
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ✅ Middleware
-app.use(cors({ origin: "*", methods: ["GET", "POST"] }));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
 
 // ✅ Serve only safe static files
-app.use('/admin', express.static(path.join(__dirname, 'admin')));
 app.use('/images', express.static(path.join(__dirname, 'images')));
 //sessions
 app.use(session({
@@ -106,22 +102,28 @@ app.get('/logout', (req, res) => {
   res.redirect('/login');
 });
 
-app.get('/dashboard', requireLogin, (req, res) => {
+app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin', 'dashboard.html'));
 });
 
 
 // Fetch all blogs (used by frontend & dashboard)
-app.get("/api/blogs", async (req, res) => {
+// Fetch all blogs
+app.get("/blogs", async (req, res) => {
   try {
     const blogs = await Blog.find().sort({ date: -1 });
+    console.log("Fetched blogs:", blogs.length);
     res.json(blogs);
   } catch (err) {
+    console.error("Failed to fetch blogs:", err);
     res.status(500).json({ error: "Failed to fetch blogs" });
   }
 });
 // =================== ADD BLOG ===================
-app.post("/add-blog", requireLogin, upload.single("image"), async (req, res) => {
+app.post("/add-blog", upload.single("image"), async (req, res) => {
+  console.log("Received blog data:", req.body);
+  console.log("Received file:", req.file);
+
   try {
     const newBlog = new Blog({
       title: req.body.title,
@@ -130,6 +132,7 @@ app.post("/add-blog", requireLogin, upload.single("image"), async (req, res) => 
       imageUrl: req.file ? "/uploads/" + req.file.filename : "",
     });
     await newBlog.save();
+    console.log("Blog saved:", newBlog);
     res.status(200).json({ message: "Blog added successfully!" });
   } catch (err) {
     console.error("Error adding blog:", err);
@@ -144,27 +147,9 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 
-// Secure blog POST route
-app.post('/api/blogs', (req, res) => {
-  upload.single('image')(req, res, (err) => {
-    if (err) {
-      return res.status(400).json({ error: err.message });
-    }
-
-    const blog = {
-      title: req.body.title,
-      content: req.body.content,
-      imageUrl: req.file ? `/uploads/${req.file.filename}` : null,
-      date: new Date()
-    };
-
-    blogs.unshift(blog);
-    res.status(201).json(blog);
-  });
-});
 
 
-app.get('/edit-blog/:id', requireLogin, async (req, res) => {
+app.get('/edit-blog/:id', async (req, res) => {
   const blog = await Blog.findById(req.params.id);
   if (!blog) return res.send('Blog not found');
 
@@ -180,7 +165,9 @@ app.get('/edit-blog/:id', requireLogin, async (req, res) => {
 });
 
 // =================== EDIT BLOG ===================
-app.post("/edit-blog/:id", requireLogin, upload.single("image"), async (req, res) => {
+app.post("/edit-blog/:id", upload.single("image"), async (req, res) => {
+  console.log("Editing blog ID:", req.params.id, req.body, req.file);
+
   try {
     const blog = await Blog.findById(req.params.id);
     if (!blog) return res.status(404).json({ error: "Blog not found" });
@@ -199,7 +186,8 @@ app.post("/edit-blog/:id", requireLogin, upload.single("image"), async (req, res
     blog.date = req.body.date;
     await blog.save();
 
-    res.redirect("/dashboard");
+    console.log("Blog updated:", blog);
+    res.status(200).json({ message: "Blog updated successfully!" });
   } catch (err) {
     console.error("Error editing blog:", err);
     res.status(500).json({ error: "Failed to edit blog" });
@@ -208,7 +196,9 @@ app.post("/edit-blog/:id", requireLogin, upload.single("image"), async (req, res
 
 
 
-app.post("/delete-blog/:id", requireLogin, async (req, res) => {
+app.post("/delete-blog/:id", async (req, res) => {
+  console.log("Deleting blog ID:", req.params.id);
+
   try {
     const blog = await Blog.findById(req.params.id);
     if (blog && blog.imageUrl) {
@@ -217,12 +207,15 @@ app.post("/delete-blog/:id", requireLogin, async (req, res) => {
       });
     }
     await Blog.findByIdAndDelete(req.params.id);
-    res.redirect("/dashboard");
+    console.log("Blog deleted:", req.params.id);
+    res.status(200).json({ message: "Blog deleted successfully!" });
   } catch (err) {
+    console.error("Error deleting blog:", err);
     res.status(500).json({ error: "Failed to delete blog" });
   }
 });
 
+app.use('/admin', express.static(path.join(__dirname, 'admin')));
 //send-contactUsForm
 //german page form
 app.post('/send-contactUsForm', async (req, res) => {
