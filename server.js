@@ -10,6 +10,22 @@ const multer = require('multer');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const helmet = require('helmet');
+
+// Define CSP
+app.use(helmet.contentSecurityPolicy({
+  useDefaults: true,
+  directives: {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'", "blob:"],
+    styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+    fontSrc: ["'self'", "https:", "data:"],
+    imgSrc: ["'self'", "https:", "data:"],
+    connectSrc: ["'self'", "https:"],
+    objectSrc: ["'none'"],
+    upgradeInsecureRequests: [],
+  },
+}));
 
 
 
