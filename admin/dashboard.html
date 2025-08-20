@@ -142,8 +142,8 @@
   <p>You can now create, edit, or delete blogs.</p>
 
   <h2>Create Blog</h2>
-  <form id="addBlogForm" enctype="multipart/form-data">
-    <input type="file" name="image" placeholder="Image URL" accept="image/*" required />
+  <form id="addBlogForm">
+    <input type="text" name="image" placeholder="Image URL" required />
     <input type="text" name="title" placeholder="Blog Title" required>
     <textarea name="content" placeholder="Blog Content" required></textarea>
     <input type="date" name="date" required />
@@ -156,6 +156,82 @@
   <br>
   <a href="/logout" style="background-color: #a31313; padding: 10px; color: white; text-decoration: none; border-radius: 5px;">Logout</a>
 
-  <script src="./dashboard.js"></script>
+  <script>
+    function escapeHTML(str) {
+      if (!str) return '';
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function createBlogHTML(blog) {
+      const truncated = blog.content.length > 300;
+      const shortText = escapeHTML(blog.content.slice(0, 300));
+      const fullText = escapeHTML(blog.content);
+
+      return `
+        <div class="blog-card">
+          <img class="blog-image" src="${blog.imageUrl}" alt="Blog Image" />
+          <div class="blog-content-wrapper">
+            <h3>${escapeHTML(blog.title)}</h3>
+            <p><strong>Date:</strong> ${new Date(blog.date).toLocaleDateString()}</p>
+            <p class="blog-content">
+              <span class="short">${shortText}${truncated ? '...' : ''}</span>
+              ${truncated ? `<span class="full" style="display:none;">${fullText}</span>
+              <button class="toggle-content">Read More</button>` : ''}
+            </p>
+          </div>
+
+          <form action="/edit-blog/${blog._id}" method="POST">
+            <input type="text" name="title" value="${escapeHTML(blog.title)}" required>
+            <textarea name="content" required>${escapeHTML(blog.content)}</textarea>
+            <input type="text" name="image" value="${blog.imageUrl}" required>
+            <input type="date" name="date" value="${blog.date.split('T')[0]}" required>
+            <button type="submit">Update</button>
+          </form>
+
+          <form action="/delete-blog/${blog._id}" method="POST">
+            <button type="submit" style="background: red;">Delete</button>
+          </form>
+        </div>
+      `;
+    }
+
+    fetch('/api/blogs')
+      .then(res => res.json())
+      .then(data => {
+        const blogListDiv = document.getElementById('blogsList');
+        data.forEach(blog => {
+          blogListDiv.innerHTML += createBlogHTML(blog);
+        });
+
+        document.querySelectorAll('.toggle-content').forEach(btn => {
+          btn.addEventListener('click', function () {
+            const parent = this.parentElement;
+            const short = parent.querySelector('.short');
+            const full = parent.querySelector('.full');
+            const isExpanded = full.style.display === 'inline';
+
+            short.style.display = isExpanded ? 'inline' : 'none';
+            full.style.display = isExpanded ? 'none' : 'inline';
+            this.textContent = isExpanded ? 'Read More' : 'Read Less';
+          });
+        });
+      });
+
+    document.getElementById('addBlogForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      fetch('/add-blog', {
+        method: 'POST',
+        body: new URLSearchParams(formData)
+      }).then(res => {
+        if (res.ok) location.reload();
+      });
+    });
+  </script>
 </body>
 </html>

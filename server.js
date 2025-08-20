@@ -1,122 +1,35 @@
-// server.js (full, paste-replace)
-require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
 const mongoose = require('mongoose');
-const bodyParser = require('body-parser'); // optional but explicit
+const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
-const cors = require('cors');
-const helmet = require('helmet');
-const MongoStore = require('connect-mongo');
-const fs = require('fs');
-const multer = require('multer');
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-import cors from "cors";
+require('dotenv').config(); // Load environment variables
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-/* ---------------- Trust proxy (Render/Heroku style) ---------------- */
-app.set('trust proxy', 1);
-app.use(express.static(path.join(__dirname, 'admin')));
-
-/* ---------------- CORS ----------------
-   Adjust allowedOrigins to include every frontend origin that needs access.
-*/
-const allowedOrigins = [
-  'https://immigration-frontend-ten.vercel.app',
-  'https://immigration-frontend-dr23pg6wm-adarsh-guptas-projects-8d1322f2.vercel.app/'
-];
-
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("CORS not allowed"));
-    }
-  },
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true
-}));
-
-// ✅ Handle preflight requests
-app.options("*", cors());
-/* ---------------- Helmet (CSP) ----------------
-   Allows fonts, blob scripts and remote images. Adjust as needed.
-*/
-app.use((req, res, next) => {
-  res.setHeader(
-    "Content-Security-Policy",
-    "default-src 'self' data: blob:; " +
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; " +
-    "style-src 'self' 'unsafe-inline'; " +
-    "img-src 'self' data: blob:;"
-  );
-  next();
-});
-
-/* ---------------- Body parsers ---------------- */
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
+// ✅ Middleware
+app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-/* ---------------- Sessions ---------------- */
+app.use(express.static('public'));
+app.use(express.static(__dirname));
+app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use(session({
-  secret: process.env.SESSION_SECRET || "supersecret",
+  secret: process.env.SESSION_SECRET || 'your_secret_key',
   resave: false,
-  saveUninitialized: false,
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI,
-    ttl: 14 * 24 * 60 * 60 // 14 days
-  }),
-  cookie: {
-    httpOnly: true,
-    secure: true,          // ✅ Required when frontend is HTTPS (Vercel)
-    sameSite: "none",      // ✅ Allows cross-site cookie (Render <-> Vercel)
-    maxAge: 1000 * 60 * 60 * 24 // 1 day
-  }
+  saveUninitialized: true
 }));
 
-/* ---------------- Cloudinary + multer storage ----------------
-   Make sure you set CLOUD_NAME, CLOUD_API_KEY, CLOUD_API_SECRET in Render env.
-*/
-cloudinary.config({
-  cloud_name: process.env.CLOUD_NAME,
-  api_key: process.env.CLOUD_API_KEY,
-  api_secret: process.env.CLOUD_API_SECRET
-});
-
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: 'blogs',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp']
-  }
-});
-const upload = multer({ storage });
-
-/* ---------------- Static admin folder ----------------
-   login.html and dashboard.html should be in ./admin
-*/
-app.use('/admin', express.static(path.join(__dirname, 'admin')));
-
-/* ---------------- MongoDB ----------------
-   Use MONGODB_URI in Render env.
-*/
+// ✅ Connect to MongoDB Atlas
 mongoose.connect(process.env.MONGODB_URI, {
-  // options harmless for recent drivers
   useNewUrlParser: true,
-  useUnifiedTopology: true
+  useUnifiedTopology: true,
 })
   .then(() => console.log('✅ Connected to MongoDB Atlas'))
   .catch((err) => console.error('❌ MongoDB connection error:', err));
 
-/* ---------------- Models ---------------- */
+// ✅ Blog Schema and Model
 const blogSchema = new mongoose.Schema({
   title: String,
   content: String,
@@ -125,173 +38,100 @@ const blogSchema = new mongoose.Schema({
 });
 const Blog = mongoose.model('Blog', blogSchema);
 
-/* ---------------- Utilities ---------------- */
-const PLACEHOLDER_IMG = 'https://res.cloudinary.com/demo/image/upload/w_800,h_450,c_fill,e_blur:200/sample.jpg';
-function safeImageUrl(url) {
-  if (!url) return PLACEHOLDER_IMG;
-  if (/^https?:\/\//i.test(url)) return url;
-  return PLACEHOLDER_IMG;
-}
-
-/* ---------------- Auth middleware ---------------- */
+// ✅ Auth Middleware
 function requireLogin(req, res, next) {
   if (req.session && req.session.user === 'admin') return next();
-  // If AJAX expects JSON, respond with 401 JSON
-  const acceptsJSON = req.get('Accept') && req.get('Accept').includes('application/json');
-  if (acceptsJSON || req.xhr) return res.status(401).json({ message: 'Unauthorized' });
-  // Otherwise redirect to login page
-  return res.redirect('/admin/login.html');
+  return res.redirect('/login');
 }
 
-/* ---------------- Routes ---------------- */
+// ✅ Routes
+app.get('/', (req, res) => {
+  res.send('<h1>Welcome</h1><a href="/login">Login</a>');
+});
 
-// Root → redirect to admin login
-app.get('/', (req, res) => res.redirect('/admin/login.html'));
-
-// Serve admin login page explicitly (optional)
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin', 'login.html'));
 });
 
-// Login handler — supports both form POST and fetch requests.
-// If request wants JSON, returns JSON { success, redirect } else does redirects.
 app.post('/login', (req, res) => {
-  try {
-    const { username, password } = req.body || {};
-    if (!username || !password) {
-      const resp = { success: false, message: 'Missing credentials' };
-      if (req.get('Accept') && req.get('Accept').includes('application/json')) return res.status(400).json(resp);
-      return res.status(400).send('Missing credentials');
-    }
-
-    if (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD) {
-      req.session.user = 'admin';
-      const resp = { success: true, redirect: '/dashboard' };
-      if (req.get('Accept') && req.get('Accept').includes('application/json')) return res.json(resp);
-      return res.redirect('/dashboard');
-    }
-
-    const resp = { success: false, message: 'Invalid credentials' };
-    if (req.get('Accept') && req.get('Accept').includes('application/json')) return res.status(401).json(resp);
-    return res.redirect('/admin/login.html');
-  } catch (err) {
-    console.error('Login error:', err);
-    if (req.get('Accept') && req.get('Accept').includes('application/json')) return res.status(500).json({ success: false, message: 'Server error' });
-    return res.status(500).send('Internal Server Error');
+  const { username, password } = req.body;
+  if (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD) {
+    req.session.user = username;
+    return res.redirect('/dashboard');
   }
+  res.redirect('/login');
 });
 
-// Logout
 app.get('/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.redirect('/admin/login.html');
-  });
+  req.session.destroy();
+  res.redirect('/login');
 });
 
-// Dashboard (protected)
 app.get('/dashboard', requireLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'admin', 'dashboard.html'));
 });
 
-/* ---------------- BLOG APIs ---------------- */
+app.get('/add-blog', requireLogin, (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'add-blog.html'));
+});
 
-// GET all blogs (public)
-app.get('/blogs', async (req, res) => {
+app.post('/add-blog', requireLogin, async (req, res) => {
+  const { title, content, image, date } = req.body;
+  const blog = new Blog({
+    title,
+    content,
+    imageUrl: image,
+    date: date || new Date()
+  });
+  await blog.save();
+  res.redirect('/dashboard');
+});
+
+app.get('/edit-blog/:id', requireLogin, async (req, res) => {
+  const blog = await Blog.findById(req.params.id);
+  if (!blog) return res.send('Blog not found');
+
+  const html = `
+    <form action="/edit-blog/${blog._id}" method="POST">
+      <input type="text" name="title" value="${blog.title}" required><br>
+      <input type="text" name="image" value="${blog.imageUrl}" required><br>
+      <input type="date" name="date" value="${blog.date.toISOString().split('T')[0]}" required><br>
+      <textarea name="content" required>${blog.content}</textarea><br>
+      <button type="submit">Update Blog</button>
+    </form>`;
+  res.send(html);
+});
+
+app.post('/edit-blog/:id', requireLogin, async (req, res) => {
+  const { title, content, image, date } = req.body;
+  await Blog.findByIdAndUpdate(req.params.id, {
+    title,
+    content,
+    imageUrl: image,
+    date: date || new Date()
+  });
+  res.redirect('/dashboard');
+});
+
+app.post('/delete-blog/:id', async (req, res) => {
+  const blogId = req.params.id;
   try {
-    const blogs = await Blog.find().sort({ createdAt: -1 });
-    const mapped = blogs.map(b => ({ ...b, imageUrl: safeImageUrl(b.imageUrl) }));
-    return res.json(mapped);
+    await Blog.findByIdAndDelete(blogId);
+    res.redirect('/dashboard');
   } catch (err) {
-    console.error('Failed to fetch blogs:', err);
-    return res.status(500).json({ error: 'Failed to fetch blogs' });
+    console.error('Error deleting blog:', err);
+    res.status(500).send('Failed to delete blog');
   }
 });
 
-// Add blog (protected)
-app.post('/add-blog', requireLogin, upload.single('image'), async (req, res) => {
+app.get('/api/blogs', async (req, res) => {
   try {
-    const { title, content } = req.body || {};
-
-    let imageUrl = req.body.image || '';
-    if (req.file) {
-      // Upload to Cloudinary
-      const result = await cloudinary.uploader.upload(req.file.path);
-      imageUrl = result.secure_url;
-    }
-
-    const blog = new Blog({
-      title,
-      content,
-      imageUrl, // ✅ consistent field
-      // no manual date; createdAt comes from timestamps
-    });
-
-    await blog.save();
-    return res.json({ message: 'Blog added successfully!', blog });
-  } catch (err) {
-    console.error('Add blog error:', err);
-    return res.status(500).json({ message: 'Internal server error' });
+    const blogs = await Blog.find().sort({ date: -1 });
+    res.json(blogs);
+  } catch (error) {
+    res.status(500).json({ message: 'Could not load blogs' });
   }
 });
-
-// Edit blog (protected)
-app.post('/edit-blog/:id', requireLogin, upload.single('image'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: 'Invalid id' });
-
-    const { title, content, image } = req.body || {};
-    const blog = await Blog.findById(id);
-    if (!blog) return res.status(404).json({ message: 'Blog not found' });
-
-    blog.title = title;
-    blog.content = content;
-
-    if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path);
-      blog.imageUrl = result.secure_url;
-    } else if (image) {
-      blog.imageUrl = image;
-    }
-
-    await blog.save();
-    return res.json({ message: 'Blog updated successfully!', blog });
-  } catch (err) {
-    console.error('Edit blog error:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// Delete blog (protected)
-app.post('/delete-blog/:id', requireLogin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: 'Invalid id' });
-
-    const blog = await Blog.findByIdAndDelete(id);
-    if (!blog) return res.status(404).json({ message: 'Blog not found' });
-
-    return res.json({ message: 'Blog deleted successfully!' });
-  } catch (err) {
-    console.error('Delete blog error:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-
-/* ---------------- Email routes (unchanged) ----------------
-   If you have many, keep them here. Using transporter defined above.
-   Example (keep your existing ones)...
-*/
-
-// Ensure uploads dir exists (not really used now, Cloudinary used)
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir);
-}
-
-
-
 
 //send-contactUsForm
 //german page form
