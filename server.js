@@ -30,8 +30,14 @@ const allowedOrigins = [
 ];
 
 app.use(cors({
-  origin: ["https://immigration-frontend-ten.vercel.app"], // add all frontend URLs
-  credentials: true, // important for cookies
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true, // allow cookies if you're using session
 }));
 /* ---------------- Helmet (CSP) ----------------
    Allows fonts, blob scripts and remote images. Adjust as needed.
