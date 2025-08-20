@@ -11,10 +11,6 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 
-const upload = multer({ storage });
-
-// Serve uploads folder statically
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 
 const cors = require('cors');
