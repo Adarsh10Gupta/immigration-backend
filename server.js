@@ -10,38 +10,7 @@ const multer = require('multer');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const helmet = require('helmet');
 
-// Define CSP
-app.use(helmet.contentSecurityPolicy({
-  useDefaults: true,
-  directives: {
-    defaultSrc: ["'self'"],
-    scriptSrc: ["'self'", "blob:"],
-    styleSrc: ["'self'", "'unsafe-inline'", "https:"],
-    fontSrc: ["'self'", "https:", "data:"],
-    imgSrc: ["'self'", "https:", "data:"],
-    connectSrc: ["'self'", "https:"],
-    objectSrc: ["'none'"],
-    upgradeInsecureRequests: [],
-  },
-}));
-
-// Content Security Policy middleware
-app.use((req, res, next) => {
-  res.setHeader(
-    "Content-Security-Policy",
-    "default-src 'self'; " +
-    "script-src 'self' blob:; " +
-    "style-src 'self' 'unsafe-inline' https:; " +
-    "font-src 'self' https: data:; " +
-    "img-src 'self' https: data:; " +
-    "connect-src 'self' https:; " +
-    "object-src 'none'; " +
-    "frame-ancestors 'self';"
-  );
-  next();
-});
 
 
 
@@ -63,6 +32,22 @@ app.use(cors({
   },
   credentials: true
 }));
+const helmet = require("helmet");
+
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "blob:"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://your-backend-domain.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://your-backend-domain.com"],
+      objectSrc: ["'none'"]
+    },
+  })
+);
+
 
 //cloudinary settings
 const cloudinary = require('cloudinary').v2;
