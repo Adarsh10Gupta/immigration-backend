@@ -198,9 +198,22 @@ app.get('/blogs', async (req, res) => {
 // Add blog (protected)
 app.post('/add-blog', requireLogin, upload.single('image'), async (req, res) => {
   try {
-    const { title, content, date } = req.body || {};
-    const imageUrl = req.file ? req.file.path : (req.body.image || '');
-    const blog = new Blog({ title, content, date, imageUrl });
+    const { title, content } = req.body || {};
+
+    let imageUrl = req.body.image || '';
+    if (req.file) {
+      // Upload to Cloudinary
+      const result = await cloudinary.uploader.upload(req.file.path);
+      imageUrl = result.secure_url;
+    }
+
+    const blog = new Blog({
+      title,
+      content,
+      imageUrl, // ✅ consistent field
+      // no manual date; createdAt comes from timestamps
+    });
+
     await blog.save();
     return res.json({ message: 'Blog added successfully!', blog });
   } catch (err) {
@@ -215,16 +228,16 @@ app.post('/edit-blog/:id', requireLogin, upload.single('image'), async (req, res
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: 'Invalid id' });
 
-    const { title, content, date, image } = req.body || {};
+    const { title, content, image } = req.body || {};
     const blog = await Blog.findById(id);
     if (!blog) return res.status(404).json({ message: 'Blog not found' });
 
     blog.title = title;
     blog.content = content;
-    blog.date = date;
 
     if (req.file) {
-      blog.imageUrl = req.file.path;
+      const result = await cloudinary.uploader.upload(req.file.path);
+      blog.imageUrl = result.secure_url;
     } else if (image) {
       blog.imageUrl = image;
     }
@@ -246,13 +259,13 @@ app.post('/delete-blog/:id', requireLogin, async (req, res) => {
     const blog = await Blog.findByIdAndDelete(id);
     if (!blog) return res.status(404).json({ message: 'Blog not found' });
 
-    // optional: delete Cloudinary asset if you stored public_id
     return res.json({ message: 'Blog deleted successfully!' });
   } catch (err) {
     console.error('Delete blog error:', err);
     return res.status(500).json({ message: 'Internal server error' });
   }
 });
+
 
 /* ---------------- Email routes (unchanged) ----------------
    If you have many, keep them here. Using transporter defined above.

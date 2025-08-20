@@ -20,7 +20,7 @@ function createBlogHTML(blog) {
       <img class="blog-image" src="${blog.imageUrl}" alt="Blog Image" />
       <div class="blog-content-wrapper">
         <h3>${escapeHTML(blog.title)}</h3>
-        <p><strong>Date:</strong> ${new Date(blog.date).toLocaleDateString()}</p>
+        <p><strong>Date:</strong> ${new Date(blog.createdAt).toLocaleDateString()}</p>
         <p class="blog-content">
           <span class="short">${shortText}${truncated ? '...' : ''}</span>
           ${truncated ? `<span class="full" style="display:none;">${fullText}</span>
@@ -33,7 +33,7 @@ function createBlogHTML(blog) {
         <textarea name="content" required>${escapeHTML(blog.content)}</textarea>
         <input type="hidden" name="image" value="${blog.imageUrl}">
         <input type="file" name="image">
-        <input type="date" name="date" value="${new Date(blog.date).toISOString().split('T')[0]}" required>
+        <input type="date" name="date" value="${new Date(blog.createdAt).toISOString().split('T')[0]}" required>
         <button type="submit">Update</button>
       </form>
 
@@ -41,6 +41,7 @@ function createBlogHTML(blog) {
     </div>
   `;
 }
+
 
 // Fetch and render blogs
 function loadBlogs() {
