@@ -44,7 +44,7 @@ function createBlogHTML(blog) {
 
 // Fetch and render blogs
 function loadBlogs() {
-  fetch(`${BACKEND_URL}/blogs`)
+  fetch(`${BACKEND_URL}/blogs`, {credentials: "include"})
     .then(res => res.json())
     .then(data => {
       const blogListDiv = document.getElementById('blogsList');
@@ -78,6 +78,7 @@ function attachBlogEvents() {
 
       fetch(`${BACKEND_URL}/edit-blog/${blogId}`, {
         method: 'POST',
+        credentials: "include",
         body: formData
       })
       .then(res => res.json())
@@ -94,7 +95,7 @@ function attachBlogEvents() {
       const blogId = this.closest('.blog-card').dataset.id;
       if (!confirm("Are you sure you want to delete this blog?")) return;
 
-      fetch(`${BACKEND_URL}/delete-blog/${blogId}`, { method: 'POST' })
+      fetch(`${BACKEND_URL}/delete-blog/${blogId}`, { method: 'POST', credentials: "include" })
         .then(res => res.json())
         .then(data => {
           alert(data.message);
@@ -110,7 +111,7 @@ document.getElementById('addBlogForm').addEventListener('submit', function (e) {
   e.preventDefault();
   const formData = new FormData(this);
 
-  fetch(`${BACKEND_URL}/add-blog`, { method: 'POST', body: formData })
+  fetch(`${BACKEND_URL}/add-blog`, { method: 'POST', body: formData, credentials: "include" })
     .then(res => res.json())
     .then(data => {
       alert(data.message);

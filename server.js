@@ -28,8 +28,8 @@ const allowedOrigins = [
 ];
 
 app.use(cors({
-  origin: true,        // allows all origins dynamically
-  credentials: true    // needed if you use cookies/session
+  origin: ["https://immigration-frontend-ten.vercel.app"], // add all frontend URLs
+  credentials: true, // important for cookies
 }));
 /* ---------------- Helmet (CSP) ----------------
    Allows fonts, blob scripts and remote images. Adjust as needed.
@@ -53,13 +53,18 @@ app.use(express.urlencoded({ extended: true }));
 
 /* ---------------- Sessions ---------------- */
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'your_secret_key',
+  secret: process.env.SESSION_SECRET || "supersecret",
   resave: false,
   saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGO_URI,
+    ttl: 14 * 24 * 60 * 60 // 14 days
+  }),
   cookie: {
-    secure: process.env.NODE_ENV === 'production', // true only over HTTPS
     httpOnly: true,
-    sameSite: 'lax'
+    secure: true,          // ✅ Required when frontend is HTTPS (Vercel)
+    sameSite: "none",      // ✅ Allows cross-site cookie (Render <-> Vercel)
+    maxAge: 1000 * 60 * 60 * 24 // 1 day
   }
 }));
 
