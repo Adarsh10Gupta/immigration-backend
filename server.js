@@ -9,6 +9,16 @@ require('dotenv').config(); // Load environment variables
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const cors = require("cors");
+
+// Allow only your frontend
+app.use(cors({
+  origin: "https://immigration-frontend-qur5saqzr-adarsh-guptas-projects-8d1322f2.vercel.app",
+  methods: ["GET", "POST"],
+  credentials: true
+}));
+
+
 // ✅ Middleware
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json());
