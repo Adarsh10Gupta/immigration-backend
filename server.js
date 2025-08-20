@@ -8,6 +8,7 @@ const bodyParser = require('body-parser'); // optional but explicit
 const nodemailer = require('nodemailer');
 const cors = require('cors');
 const helmet = require('helmet');
+const MongoStore = require('connect-mongo');
 const fs = require('fs');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
