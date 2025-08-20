@@ -2,6 +2,19 @@ const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
 
+const multer = require("multer");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const cloudinary = require("../config/cloudinary");
+
+// Configure storage
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: "blogs",        // all images go in "blogs" folder in Cloudinary
+    allowed_formats: ["jpg", "png", "jpeg", "webp"]
+  }
+});
+const upload = multer({ storage });
 // Blog schema
 const blogSchema = new mongoose.Schema({
   title: String,
@@ -17,12 +30,21 @@ function requireLogin(req, res, next) {
   return res.redirect("/login");
 }
 
-// Add blog
-router.post("/add-blog", requireLogin, async (req, res) => {
-  const { title, content, image, date } = req.body;
-  const blog = new Blog({ title, content, imageUrl: image, date: date || new Date() });
-  await blog.save();
-  res.redirect("/dashboard");
+router.post("/add-blog", requireLogin, upload.single("image"), async (req, res) => {
+  try {
+    const { title, content, date } = req.body;
+    const blog = new Blog({
+      title,
+      content,
+      imageUrl: req.file?.path, // Cloudinary gives us the hosted URL here
+      date: date || new Date()
+    });
+    await blog.save();
+    res.redirect("/dashboard");
+  } catch (err) {
+    console.error("Error uploading blog:", err);
+    res.status(500).send("Error uploading blog");
+  }
 });
 
 // Edit blog
