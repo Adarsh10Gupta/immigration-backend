@@ -42,22 +42,13 @@ app.use(cors({
 /* ---------------- Helmet (CSP) ----------------
    Allows fonts, blob scripts and remote images. Adjust as needed.
 */
-app.use(helmet({
-  contentSecurityPolicy: {
-    useDefaults: true,
-    directives: {
-      "default-src": ["'self'"],
-      "script-src": ["'self'", "'unsafe-inline'", "blob:", "https:"],
-      "script-src-elem": ["'self'", "'unsafe-inline'", "blob:", "https:"],
-      "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https:"],
-      "font-src": ["'self'", "https://fonts.gstatic.com", "https:", "data:"],
-      "img-src": ["'self'", "data:", "https:", "blob:"],
-      "connect-src": ["'self'", "https:"],
-      "object-src": ["'none'"]
-    }
-  },
-  crossOriginEmbedderPolicy: false
-}));
+app.use((req, res, next) => {
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src * 'self' data: blob:; script-src * 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src * 'self' 'unsafe-inline'; img-src * data: blob:;"
+  );
+  next();
+});
 
 /* ---------------- Body parsers ---------------- */
 app.use(bodyParser.urlencoded({ extended: true }));
