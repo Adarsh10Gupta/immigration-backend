@@ -27,6 +27,22 @@ app.use(helmet.contentSecurityPolicy({
   },
 }));
 
+// Content Security Policy middleware
+app.use((req, res, next) => {
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; " +
+    "script-src 'self' blob:; " +
+    "style-src 'self' 'unsafe-inline' https:; " +
+    "font-src 'self' https: data:; " +
+    "img-src 'self' https: data:; " +
+    "connect-src 'self' https:; " +
+    "object-src 'none'; " +
+    "frame-ancestors 'self';"
+  );
+  next();
+});
+
 
 
 const cors = require('cors');
