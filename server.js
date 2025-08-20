@@ -34,19 +34,26 @@ app.use(cors({
 }));
 const helmet = require("helmet");
 
+// ✅ Helmet with relaxed CSP
 app.use(
-  helmet.contentSecurityPolicy({
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "blob:"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://your-backend-domain.com"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://your-backend-domain.com"],
-      objectSrc: ["'none'"]
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        "default-src": ["'self'"],
+        "font-src": ["'self'", "https:", "data:"],
+        "script-src": ["'self'", "'unsafe-inline'", "blob:", "https:"],
+        "script-src-elem": ["'self'", "'unsafe-inline'", "blob:", "https:"],
+        "style-src": ["'self'", "'unsafe-inline'", "https:"],
+        "img-src": ["'self'", "data:", "https:"],
+        "connect-src": ["'self'", "https:"]
+      }
     },
+    crossOriginEmbedderPolicy: false,
   })
 );
+// ✅ Serve your admin folder for login & dashboard
+app.use('/admin', express.static(path.join(__dirname, 'admin')));
 
 
 //cloudinary settings
@@ -116,6 +123,10 @@ function requireLogin(req, res, next) {
   return res.redirect('/login');
 }
 
+// Example route (redirect root to login)
+app.get('/', (req, res) => {
+  res.redirect('/admin/login.html');
+});
 // ✅ Routes
 app.get('/', (req, res) => {
   res.send('<h1>Welcome</h1><a href="/login">Login</a>');
