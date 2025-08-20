@@ -11,15 +11,6 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, "uploads"));
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
-});
-
 const upload = multer({ storage });
 
 // Serve uploads folder statically
@@ -44,6 +35,28 @@ app.use(cors({
   },
   credentials: true
 }));
+
+//cloudinary settings
+const cloudinary = require('cloudinary').v2;
+
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,       // Your Cloudinary cloud name
+  api_key: process.env.CLOUD_API_KEY,       // Your Cloudinary API key
+  api_secret: process.env.CLOUD_API_SECRET  // Your Cloudinary secret
+});
+const multer = require('multer');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'blogs', // Cloudinary folder
+    allowed_formats: ['jpg', 'png', 'jpeg'],
+  },
+});
+
+const parser = multer({ storage: storage });
+
 
 
 // ✅ Middleware
@@ -132,25 +145,26 @@ app.get("/blogs", async (req, res) => {
   }
 });
 // =================== ADD BLOG ===================
-app.post("/add-blog", upload.single("image"), async (req, res) => {
-  console.log("Received blog data:", req.body);
-  console.log("Received file:", req.file);
-
+app.post('/add-blog', parser.single('image'), async (req, res) => {
   try {
+    const { title, content, date } = req.body;
+    const imageUrl = req.file ? req.file.path : '';
+
     const newBlog = new Blog({
-      title: req.body.title,
-      content: req.body.content,
-      date: req.body.date,
-      imageUrl: req.file ? "/uploads/" + req.file.filename : "",
+      title,
+      content,
+      date,
+      imageUrl
     });
+
     await newBlog.save();
-    console.log("Blog saved:", newBlog);
-    res.status(200).json({ message: "Blog added successfully!" });
+    res.json({ message: 'Blog added successfully!' });
   } catch (err) {
-    console.error("Error adding blog:", err);
-    res.status(500).json({ error: "Failed to add blog" });
+    console.error(err);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
+
 // Ensure uploads folder exists
 const fs = require('fs');
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -177,55 +191,41 @@ app.get('/edit-blog/:id', async (req, res) => {
 });
 
 // =================== EDIT BLOG ===================
-app.post("/edit-blog/:id", upload.single("image"), async (req, res) => {
-  console.log("Editing blog ID:", req.params.id, req.body, req.file);
-
+app.post('/edit-blog/:id', parser.single('image'), async (req, res) => {
   try {
+    const { title, content, date } = req.body;
     const blog = await Blog.findById(req.params.id);
-    if (!blog) return res.status(404).json({ error: "Blog not found" });
 
-    if (req.file) {
-      if (blog.imageUrl) {
-        fs.unlink(path.join(__dirname, blog.imageUrl), (err) => {
-          if (err) console.error("Failed to delete old image:", err);
-        });
-      }
-      blog.imageUrl = "/uploads/" + req.file.filename;
-    }
+    if (!blog) return res.status(404).json({ message: 'Blog not found' });
 
-    blog.title = req.body.title;
-    blog.content = req.body.content;
-    blog.date = req.body.date;
+    blog.title = title;
+    blog.content = content;
+    blog.date = date;
+
+    if (req.file) blog.imageUrl = req.file.path; // Replace image if new one uploaded
+
     await blog.save();
-
-    console.log("Blog updated:", blog);
-    res.status(200).json({ message: "Blog updated successfully!" });
+    res.json({ message: 'Blog updated successfully!' });
   } catch (err) {
-    console.error("Error editing blog:", err);
-    res.status(500).json({ error: "Failed to edit blog" });
+    console.error(err);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
 
 
-app.post("/delete-blog/:id", async (req, res) => {
-  console.log("Deleting blog ID:", req.params.id);
 
+app.post('/delete-blog/:id', async (req, res) => {
   try {
-    const blog = await Blog.findById(req.params.id);
-    if (blog && blog.imageUrl) {
-      fs.unlink(path.join(__dirname, blog.imageUrl), (err) => {
-        if (err) console.error("Failed to delete image:", err);
-      });
-    }
-    await Blog.findByIdAndDelete(req.params.id);
-    console.log("Blog deleted:", req.params.id);
-    res.status(200).json({ message: "Blog deleted successfully!" });
+    const blog = await Blog.findByIdAndDelete(req.params.id);
+    if (!blog) return res.status(404).json({ message: 'Blog not found' });
+    res.json({ message: 'Blog deleted successfully!' });
   } catch (err) {
-    console.error("Error deleting blog:", err);
-    res.status(500).json({ error: "Failed to delete blog" });
+    console.error(err);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
+
 
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
 //send-contactUsForm
